@@ -46,30 +46,26 @@ for d in data:
     market_return = sp500_return(d['first_shaken_at'])
 
     if recovery < -90:
-        categories['disaster'] += 1
-    elif recovery < -50:
-        categories['much worse'] += 1
+        categories['wiped out'] += 1
     elif recovery < 0:
-        categories['worse'] += 1
+        categories['declined'] += 1
     else:
         if recovery < market_return:
             categories['beaten by market'] += 1
         else:
             if recovery == 0:
-                categories['push'] += 1
+                categories['even'] += 1
             elif recovery > 1000:
                 categories['miracle'] += 1
-            elif recovery > 100:
-                categories['much better'] += 1
             elif recovery > 0:
-                categories['better'] += 1
+                categories['beat market'] += 1
 
 n = len(data)
 
 print '%-20s: %-10s %-10s %-10s' % ('category', 'count', 'pdf', 'cdf',)
 cdf = 0
-for k in ('disaster', 'much worse', 'worse', 'push', 'beaten by market',
-          'better', 'much better', 'miracle',):
+for k in ('wiped out', 'declined', 'even', 'beaten by market',
+          'beat market', 'miracle',):
     p = (float(categories[k]) / n * 100)
     cdf += p
     print '%-20s: %-10s %-10s %-10s' % (k, categories[k], '%.2f%%' % p,
