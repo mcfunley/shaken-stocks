@@ -42,8 +42,10 @@ data = read_data()
 categories = defaultdict(int)
 for d in data:
     sp = d['first_shaken_price']
-    recovery = (d['last_price'] - sp) / sp * 100
+    last = d['last_price']
+    recovery = (last - sp) / sp * 100
     market_return = sp500_return(d['first_shaken_at'])
+    high = d['alltime_high']
 
     if recovery < -90:
         categories['wiped out'] += 1
@@ -58,15 +60,18 @@ for d in data:
             elif recovery > 1000:
                 categories['miracle'] += 1
             elif recovery > 0:
-                categories['beat market'] += 1
+                if last < high:
+                    categories['recovered below high price'] += 1
+                else:
+                    categories['beat market'] += 1
 
 n = len(data)
 
-print '%-20s: %-10s %-10s %-10s' % ('category', 'count', 'pdf', 'cdf',)
+print '%-40s: %-10s %-10s %-10s' % ('category', 'count', 'pdf', 'cdf',)
 cdf = 0
 for k in ('wiped out', 'declined', 'even', 'beaten by market',
-          'beat market', 'miracle',):
+          'recovered below high price', 'beat market', 'miracle',):
     p = (float(categories[k]) / n * 100)
     cdf += p
-    print '%-20s: %-10s %-10s %-10s' % (k, categories[k], '%.2f%%' % p,
+    print '%-40s: %-10s %-10s %-10s' % (k, categories[k], '%.2f%%' % p,
                                         '%.2f%%' % cdf)
