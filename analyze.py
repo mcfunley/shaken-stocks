@@ -5,6 +5,8 @@ from csv import DictReader
 import os
 import sys
 
+check_against_high_price = False
+
 float_cols = ('recent_high', 'last_price', 'first_shaken_price', 'alltime_high',)
 
 
@@ -38,8 +40,31 @@ def sp500_return(d):
         except KeyError:
             d -= timedelta(days=1)
 
+
 def log_exceptional(d, r):
     print >>sys.stderr, '%-10s %-40s %.2f' % (d['symbol'], d['name'], r)
+
+
+def categorize(recovery, market_return, high):
+    if recovery < -90:
+        return 'wiped out'
+    if recovery < 0:
+        return 'declined'
+
+    # improvement cases - regardless of how better it got, we should
+    # know if the market did better
+    if recovery < market_return:
+        return 'beaten by market'
+
+    if check_against_high_price:
+        if recovery < high:
+            return 'recovered below high price'
+
+    if recovery > 1000:
+        return 'miracle'
+
+    return 'beat market'
+
 
 data = read_data()
 categories = defaultdict(int)
@@ -50,33 +75,24 @@ for d in data:
     market_return = sp500_return(d['first_shaken_at'])
     high = d['alltime_high']
 
-    if recovery < -90:
-        categories['wiped out'] += 1
-    elif recovery < 0:
-        categories['declined'] += 1
-    else:
-        if recovery < market_return:
-            categories['beaten by market'] += 1
-        else:
-            if recovery == 0:
-                categories['even'] += 1
-            elif recovery > 1000:
-                log_exceptional(d, recovery)
-                categories['miracle'] += 1
-            elif recovery > 0:
-                if last < high:
-                    categories['recovered below high price'] += 1
-                else:
-                    log_exceptional(d, recovery)
-                    categories['beat market'] += 1
+    categories[categorize(recovery, market_return, high)] += 1
+
 
 n = len(data)
+
+
+if check_against_high_price:
+    all_cats = ('wiped out', 'declined', 'beaten by market',
+                'recovered below high price', 'beat market', 'miracle',)
+else:
+    all_cats = ('wiped out', 'declined', 'beaten by market', 'beat market',
+                'miracle',)
+
 
 print
 print '%-40s: %-10s %-10s %-10s' % ('category', 'count', 'pdf', 'cdf',)
 cdf = 0
-for k in ('wiped out', 'declined', 'even', 'beaten by market',
-          'recovered below high price', 'beat market', 'miracle',):
+for k in all_cats:
     p = (float(categories[k]) / n * 100)
     cdf += p
     print '%-40s: %-10s %-10s %-10s' % (k, categories[k], '%.2f%%' % p,
