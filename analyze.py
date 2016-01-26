@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import timedelta, datetime
 from csv import DictReader
 import os
+import sys
 
 float_cols = ('recent_high', 'last_price', 'first_shaken_price', 'alltime_high',)
 
@@ -37,6 +38,8 @@ def sp500_return(d):
         except KeyError:
             d -= timedelta(days=1)
 
+def log_exceptional(d, r):
+    print >>sys.stderr, '%-10s %-40s %.2f' % (d['symbol'], d['name'], r)
 
 data = read_data()
 categories = defaultdict(int)
@@ -58,15 +61,18 @@ for d in data:
             if recovery == 0:
                 categories['even'] += 1
             elif recovery > 1000:
+                log_exceptional(d, recovery)
                 categories['miracle'] += 1
             elif recovery > 0:
                 if last < high:
                     categories['recovered below high price'] += 1
                 else:
+                    log_exceptional(d, recovery)
                     categories['beat market'] += 1
 
 n = len(data)
 
+print
 print '%-40s: %-10s %-10s %-10s' % ('category', 'count', 'pdf', 'cdf',)
 cdf = 0
 for k in ('wiped out', 'declined', 'even', 'beaten by market',
